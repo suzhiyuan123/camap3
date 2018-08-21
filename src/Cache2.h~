@@ -1,0 +1,44 @@
+#ifndef _CACHE2_H
+#define _CACHE2_H
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <stdbool.h>
+#include <sys/time.h>
+#include <sys/select.h>
+#include <iostream>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#define MAX_XBUF_LEN (5*1024)
+//缓存
+class Cache2{
+	private:
+		unsigned char *xpbuf;
+		int xnlen;
+		int xnstart;
+		int xnstop;
+	
+	public:
+		Cache2(){xpbuf = NULL;
+		 xnlen = 0;
+		 xnstart = 0;
+		 xnstop = 0;};
+//		~Cache(){};
+
+		int adddata(unsigned char *s,int l);
+
+		int _findstart(unsigned char *b,int bl,unsigned char *p,int pl);
+
+
+		int _findstop(unsigned char *b,int bl,unsigned char *p,int pl);
+
+
+		int getcmd(unsigned char *start_s,int start_l,unsigned char *stop_s,int stop_l,unsigned char *dst,int l);
+};
+#endif

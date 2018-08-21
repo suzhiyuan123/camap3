@@ -1,0 +1,8 @@
+#ifndef _AUDIT_H
+#define _AUDIT_H
+
+#include "Common.h"
+int Audit_parse(unsigned char *buf,int len);
+int Audit_parse(unsigned char *buf,int len,map<string,string> dict,char *block);
+
+#endif

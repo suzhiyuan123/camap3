@@ -1,0 +1,8 @@
+#ifndef _READDICTIONARY_H
+#define _READDICTIONARY_H
+
+#include "Common.h"
+
+int ReadDictionary(Gloabl_Param *gParam);
+
+#endif

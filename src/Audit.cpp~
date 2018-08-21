@@ -1,0 +1,45 @@
+#include <string.h>
+#include <stdio.h>
+
+#include "Common.h"
+static char cmd[][32] = {"%02#WCSR035C155","%02#WCSR010B153"};
+int Audit_parse(unsigned char *buf,int len){
+	//printf("cmd:%s c1:%s c2:%s\n",(char *)buf,cmd[0],cmd[1]);
+	if(strncmp((char *)buf,cmd[0],strlen(cmd[0])) == 0||strncmp((char *)buf,cmd[1],strlen(cmd[1])) == 0){
+		
+		return 1;
+	}
+	return 0;
+}
+
+int Audit_parse(unsigned char *buf,int len,map<string,string> dict,char *block)
+{
+
+	int l = 0;
+	char cmd[len + 1];
+	if(strncmp((char *)buf,"%02#WD",strlen("%02#WD")) == 0){
+		l = 17;
+	}else if(strncmp((char *)buf,"%02#WCS",strlen("%02#WCS")) == 0){
+		l =12;
+	}else if(strncmp((char *)buf,"%02#WS",strlen("%02#WS")) == 0){
+		l =14;
+	}
+	
+	if(l > 0){
+		memcpy(cmd,buf,l);
+		cmd[l] = '\0';
+		//printf("audit cmd:%s\n",cmd);
+		map<string,string>::iterator it;
+
+		it=dict.find(cmd);
+		if(it != dict.end()){
+			if(strstr(block,dict[cmd].c_str()) != NULL){
+
+				return 1;
+			}
+		}
+	}
+
+
+	return 0;
+}

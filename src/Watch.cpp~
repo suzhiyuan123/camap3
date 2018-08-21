@@ -1,0 +1,44 @@
+
+#include "Common.h"
+#include "NetWork.h"
+
+static int sock = -1;
+ char *ip = "127.0.0.1";
+ char *port = "8888";
+ char *name = "lo";
+
+void Init_Watch(){
+
+	//sock = Net_connect(name,ip,port);
+
+}
+
+void W_connect(){
+	if(sock = -1)
+	sock = Net_connect(name,ip,port);
+}
+
+int W_send(unsigned char *buf,int len){	
+
+	if(sock >= 0&&len > 0){
+		int l =  Net_send(sock,buf,len);
+		if(l >= 0){
+			return l;
+		}
+		else{
+			sock = -1;
+			return 0;
+		}
+	}
+	else{
+		return 0;
+	}
+}
+
+int W_recv(unsigned char *buf,int len){
+	return Net_recv(sock,buf,len);
+}
+
+int W_getsock(){
+	return sock;
+}

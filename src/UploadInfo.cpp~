@@ -1,0 +1,76 @@
+#include <string.h>
+#include   <stdio.h> 
+#include   <sys/ioctl.h> 
+#include   <sys/socket.h> 
+#include   <netinet/in.h> 
+#include   <net/if.h> 
+#include  <string.h> 
+#include <strings.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+
+#include "Common.h"
+#include "NetWork.h"
+#include "Log.h"
+
+
+
+static int sock = -1;
+static char ip[64] = {'\0'};
+static char port[64] = {'\0'};
+static char name[64] = {'\0'};
+
+
+
+void Init_UploadInfo(Gloabl_Param *gParam){
+
+	strncpy(ip,gParam->config.server.ip,sizeof(ip));
+	strncpy(port,gParam->config.server.port,sizeof(port));
+	strncpy(name,gParam->config.server.name,sizeof(name));
+
+}
+
+void UI_connect(){
+	sock = Net_connect(name,ip,port);
+}
+
+int UI_send(unsigned char *buf,int len){
+
+	//if(sock == -1)
+	//	sock = Net_connect(name,ip,port);
+	//printf("will send len:%d\n",len);
+	//WriteLog(__FILE__,__LINE__,LOG_ERROR,"UploadInfo socket error,sock:",sock);
+	if(sock >= 0&&len > 0){
+		int l =  Net_send(sock,buf,len);
+		if(l >= 0){
+			WriteLog(__FILE__,__LINE__,LOG_ERROR,"UploadInfo send:",l);
+			return l;
+		}
+		else{
+			sock = -1;
+			WriteLog(__FILE__,__LINE__,LOG_ERROR,"UploadInfo socket error,sock:",sock);
+			return 0;
+		}
+	}
+	else{
+		return 0;
+	}
+}
+
+int UI_recv(unsigned char *buf,int len){
+	return Net_recv(sock,buf,len);
+}
+
+int UI_getsock(){
+	return sock;
+}
+
+

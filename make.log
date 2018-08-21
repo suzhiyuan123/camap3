@@ -1,0 +1,2 @@
+g++-4.4  -c -o src/BlockList.o src/BlockList.cpp  -I.// -I./bin/ -I./bin/HCNetSDKCom/ -I./HCNetSDKCom/ -I./include/ -I./include/json/ -I./libs/ -I./src/ -I./include/ -pipe -g -Wall
+g++-4.4 -L./bin/  -o ./bin/camap  -I./include/ -Wl,-rpath=./:./HCNetSDKCom:./bin:./libs -lhcnetsdk -lstdc++ -ljson

@@ -1,0 +1,51 @@
+#include "Common.h"
+#include "string.h"
+
+map<string,string> _readdictionary(char *file){
+	char name[256];
+	map<string,string> m;
+	sprintf(name,"../dictionary/%s.ini",file);
+	FILE *fp = fopen(name,"r");
+	if(fp){
+		
+
+		char str[256] = {'\0'};
+		char substr1[256] = {'\0'};
+		char substr2[256] = {'\0'};
+		char *p = NULL;
+		while(fgets(str,sizeof(str),fp) != NULL){
+
+/*			printf("str:%d\n",strlen(str));
+			for(int i = 0;i < strlen(str) + 2;i++){
+				printf("%02x ",(unsigned char)str[i]);
+			}
+			printf("\n\n");
+*/
+
+			if(str[strlen(str) - 1] == 0x0a){
+				str[strlen(str) - 1] = '\0';
+			}
+			if((p = strstr(str,"=")) != NULL){
+				*p = '\0';
+				p += 1;
+				//m.insert(make_pair(p,str));
+				m.insert(map<string,string>::value_type(p,str));
+				//printf("map insert p:%s str:%s\n",p,str);
+			}
+		}
+	}
+	return m;
+}
+
+int ReadDictionary(Gloabl_Param *gParam){
+	if((NULL != gParam->config.uart1.devtype)&&(strcmp(gParam->config.uart1.devtype,"") != 0)){
+		//打开并读取字典文件
+		gParam->dict1 = _readdictionary(gParam->config.uart1.devtype);
+	}
+	if((NULL != gParam->config.uart2.devtype)&&(strcmp(gParam->config.uart2.devtype,"") != 0)){
+		//打开并读取字典文件
+		gParam->dict2 = _readdictionary(gParam->config.uart2.devtype);
+	}
+	
+	return 0;
+}

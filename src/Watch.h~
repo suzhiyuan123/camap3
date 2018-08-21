@@ -1,0 +1,15 @@
+#ifndef _WATCH_H
+#define _WATCH_H
+
+#include "Common.h"
+void Init_Watch();
+
+int W_send(unsigned char *buf,int len);
+
+int W_recv(unsigned char *buf,int len);
+
+int W_getsock();
+
+void W_connect();
+
+#endif

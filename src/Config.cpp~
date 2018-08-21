@@ -1,0 +1,408 @@
+
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#include "Common.h"
+#include "Log.h"
+
+
+#define CONFIG_FILE "config.ini"
+
+/**********************************************************************
+* 功能描述： 获取配置文件完整路径(包含文件名)
+* 输入参数： pszConfigFileName-配置文件名
+            pszWholePath-配置文件完整路径(包含文件名)
+* 输出参数： 无
+* 返 回 值： 无
+* 其它说明： 无
+* 修改日期       版本号        修改人        修改内容
+* ------------------------------------------------------------------
+* 20150522       V1.0     Zhou Zhaoxiong     创建
+********************************************************************/  
+void Config::GetCompletePath(char *pszConfigFileName, char *pszWholePath)
+{
+    char *pszHomePath      = NULL;
+    char  szWholePath[256] = {0};
+
+    // 先对输入参数进行异常判断
+    if (pszConfigFileName == NULL || pszWholePath == NULL)
+    {
+        return;
+    }
+
+ /*   pszHomePath = (char *)getenv("HOME");     // 获取当前用户所在的路径
+    if (pszHomePath == NULL)
+    {
+        return;
+    }
+*/
+    // 拼装配置文件路径
+    snprintf(szWholePath, sizeof(szWholePath)-1, "../config/%s", pszConfigFileName);
+
+    strncpy(pszWholePath, szWholePath, strlen(szWholePath));
+}
+
+
+/**********************************************************************
+* 功能描述： 获取具体的字符串值
+* 输入参数： fp-配置文件指针
+            pszSectionName-段名, 如: GENERAL
+            pszKeyName-配置项名, 如: EmployeeName
+            iOutputLen-输出缓存长度
+* 输出参数： pszOutput-输出缓存
+* 返 回 值： 无
+* 其它说明： 无
+* 修改日期       版本号        修改人         修改内容
+* ------------------------------------------------------------------
+* 20150522       V1.0     Zhou Zhaoxiong     创建
+********************************************************************/
+void Config::GetStringContentValue(FILE *fp, char *pszSectionName, char *pszKeyName, char *pszOutput, UINT32 iOutputLen)
+{
+    char  szSectionName[100]    = {0};
+    char  szKeyName[100]        = {0};
+    char  szContentLine[256]    = {0};
+    char  szContentLineBak[256] = {0};
+    UINT32 iContentLineLen       = 0;
+    UINT32 iPositionFlag         = 0;
+
+    // 先对输入参数进行异常判断
+    if (fp == NULL || pszSectionName == NULL || pszKeyName == NULL || pszOutput == NULL)
+    {
+        printf("GetStringContentValue: input parameter(s) is NULL!\n");
+        return;
+    }
+
+    sprintf(szSectionName, "[%s]", pszSectionName);
+    strcpy(szKeyName, pszKeyName);
+
+    while (feof(fp) == 0)
+    {
+        memset(szContentLine, 0x00, sizeof(szContentLine));
+        fgets(szContentLine, sizeof(szContentLine), fp);      // 获取段名
+
+        // 判断是否是注释行(以;开头的行就是注释行)或以其他特殊字符开头的行
+        if (szContentLine[0] == ';' || szContentLine[0] == '\r' || szContentLine[0] == '\n' || szContentLine[0] == '\0')
+        {
+            continue;
+        }
+
+        // 匹配段名
+        if (strncasecmp(szSectionName, szContentLine, strlen(szSectionName)) == 0)     
+        {
+            while (feof(fp) == 0)
+            {
+                memset(szContentLine,    0x00, sizeof(szContentLine));
+                memset(szContentLineBak, 0x00, sizeof(szContentLineBak));
+                fgets(szContentLine, sizeof(szContentLine), fp);     // 获取字段值
+
+                // 判断是否是注释行(以;开头的行就是注释行)
+                if (szContentLine[0] == ';')
+                {
+                    continue;
+                }
+
+                memcpy(szContentLineBak, szContentLine, strlen(szContentLine));
+
+                // 匹配配置项名
+                if (strncasecmp(szKeyName, szContentLineBak, strlen(szKeyName)) == 0)     
+                {
+                    iContentLineLen = strlen(szContentLine);
+                    for (iPositionFlag = strlen(szKeyName); iPositionFlag <= iContentLineLen; iPositionFlag ++)
+                    {
+                        if (szContentLine[iPositionFlag] == ' ')
+                        {
+                            continue;
+                        }
+                        if (szContentLine[iPositionFlag] == '=')
+                        {
+                            break;
+                        }
+
+                        iPositionFlag = iContentLineLen + 1;
+                        break;
+                    }
+
+                    iPositionFlag = iPositionFlag + 1;    // 跳过=的位置
+
+                    if (iPositionFlag > iContentLineLen)
+                    {
+                        continue;
+                    }
+
+                    memset(szContentLine, 0x00, sizeof(szContentLine));
+                    strcpy(szContentLine, szContentLineBak + iPositionFlag);
+
+                    // 去掉内容中的无关字符
+                    for (iPositionFlag = 0; iPositionFlag < strlen(szContentLine); iPositionFlag ++)
+                    {
+                        if (szContentLine[iPositionFlag] == '\r' || szContentLine[iPositionFlag] == '\n' || szContentLine[iPositionFlag] == '\0')
+                        {
+                            szContentLine[iPositionFlag] = '\0';
+                            break;
+                        }
+                    }
+
+                    // 将配置项内容拷贝到输出缓存中
+                    strncpy(pszOutput, szContentLine, iOutputLen-1);
+                    break;
+                }
+                else if (szContentLine[0] == '[')
+                {
+                    break;
+                }
+            }
+            break;
+        }
+    }
+}
+
+
+/**********************************************************************
+* 功能描述： 从配置文件中获取字符串
+* 输入参数： pszSectionName-段名, 如: GENERAL
+            pszKeyName-配置项名, 如: EmployeeName
+            pDefaultVal-默认值
+            iOutputLen-输出缓存长度
+            pszConfigFileName-配置文件名
+* 输出参数： pszOutput-输出缓存
+* 返 回 值： 无
+* 其它说明： 无
+* 修改日期       版本号        修改人         修改内容
+* ------------------------------------------------------------------
+* 20150522       V1.0     Zhou Zhaoxiong     创建
+********************************************************************/  
+void Config::GetConfigFileStringValue(char *pszSectionName, char *pszKeyName, char *pDefaultVal, char *pszOutput, UINT32 iOutputLen, char *pszConfigFileName)
+{
+    FILE  *fp                    = NULL;
+    char  szWholePath[256]      = {0};
+
+    // 先对输入参数进行异常判断
+    if (pszSectionName == NULL || pszKeyName == NULL || pszOutput == NULL || pszConfigFileName == NULL)
+    {
+        printf("GetConfigFileStringValue: input parameter(s) is NULL!\n");
+        return;
+    }
+
+    // 获取默认值
+    if (pDefaultVal == NULL)
+    {
+        strcpy(pszOutput, "");
+    }
+    else
+    {
+        strcpy(pszOutput, pDefaultVal);
+    }
+
+    // 打开配置文件
+    GetCompletePath(pszConfigFileName, szWholePath);
+    fp = fopen(szWholePath, "r");
+    if (fp == NULL)
+    {
+        printf("GetConfigFileStringValue: open %s failed!\n", szWholePath);
+        return;
+    }
+
+    // 调用函数用于获取具体配置项的值
+    GetStringContentValue(fp, pszSectionName, pszKeyName, pszOutput, iOutputLen);
+
+    // 关闭文件
+    fclose(fp);
+    fp = NULL;
+}
+
+
+/**********************************************************************
+* 功能描述： 从配置文件中获取整型变量
+* 输入参数： pszSectionName-段名, 如: GENERAL
+            pszKeyName-配置项名, 如: EmployeeName
+            iDefaultVal-默认值
+            pszConfigFileName-配置文件名
+* 输出参数： 无
+* 返 回 值： iGetValue-获取到的整数值   -1-获取失败
+* 其它说明： 无
+* 修改日期       版本号       修改人         修改内容
+* ------------------------------------------------------------------
+* 20150522       V1.0     Zhou Zhaoxiong     创建
+********************************************************************/  
+INT32 LocalConfig::GetConfigFileIntValue(char *pszSectionName, char *pszKeyName, UINT32 iDefaultVal, char *pszConfigFileName)
+{
+    char  szGetValue[512] = {0};
+    INT32  iGetValue       = 0;
+
+    // 先对输入参数进行异常判断
+    if (pszSectionName == NULL || pszKeyName == NULL || pszConfigFileName == NULL)
+    {
+        printf("GetConfigFileIntValue: input parameter(s) is NULL!\n");
+        return -1;
+    }
+
+    GetConfigFileStringValue(pszSectionName, pszKeyName, NULL, szGetValue, 512-1, pszConfigFileName);    // 先将获取的值存放在字符型缓存中
+
+    if (szGetValue[0] == '\0' || szGetValue[0] == ';')    // 如果是结束符或分号, 则使用默认值
+    {
+        iGetValue = iDefaultVal;
+    }
+    else
+    {
+        iGetValue = atoi(szGetValue);
+    }
+
+    return iGetValue;
+}
+
+void LocalConfig::UpdateGlobalParam(Gloabl_Param *gParam){
+
+	//服务器
+	GetConfigFileStringValue("Server","networkcard","",gParam->config.server.name,sizeof(gParam->config.server.name),CONFIG_FILE);
+	GetConfigFileStringValue("Server","serverip","192.168.0.163",gParam->config.server.ip,sizeof(gParam->config.server.ip),CONFIG_FILE);
+	GetConfigFileStringValue("Server","serverport","90000",gParam->config.server.port,sizeof(gParam->config.server.port),CONFIG_FILE);
+
+	//串口组1
+	//gParam->loglevel = GetConfigFileIntValue("LogLevel","loglevel",1,"config.ini");
+	
+	gParam->config.uart1.baude = GetConfigFileIntValue("Uart1","baude",115200,CONFIG_FILE);
+	gParam->config.uart1.databits = GetConfigFileIntValue("Uart1","databits",8,CONFIG_FILE);
+	gParam->config.uart1.stopbits = GetConfigFileIntValue("Uart1","stopbits",1,CONFIG_FILE);
+	GetConfigFileStringValue("Uart1","devtype","SR-COD-02",gParam->config.uart1.devtype,sizeof(gParam->config.uart1.devtype),CONFIG_FILE);
+	GetConfigFileStringValue("Uart1","block","",gParam->config.uart1.block,sizeof(gParam->config.uart1.block),CONFIG_FILE);
+	GetConfigFileStringValue("Uart1","alarm","",gParam->config.uart1.alarm,sizeof(gParam->config.uart1.alarm),CONFIG_FILE);
+	GetConfigFileStringValue("Uart1","parity","N",gParam->config.uart1.parity,sizeof(gParam->config.uart1.parity),CONFIG_FILE);
+	GetConfigFileStringValue("Uart1","file1","/dev/ttyS0",gParam->config.uart1.file1,sizeof(gParam->config.uart1.file1),CONFIG_FILE);	
+	GetConfigFileStringValue("Uart1","file2","/dev/ttyS1",gParam->config.uart1.file2,sizeof(gParam->config.uart1.file2),CONFIG_FILE);	
+	//串口组2
+	gParam->config.uart2.baude = GetConfigFileIntValue("Uart2","baude",115200,CONFIG_FILE);
+	gParam->config.uart2.databits = GetConfigFileIntValue("Uart2","databits",8,CONFIG_FILE);
+	gParam->config.uart2.stopbits = GetConfigFileIntValue("Uart2","stopbits",1,CONFIG_FILE);
+	GetConfigFileStringValue("Uart2","devtype","SR-COD-02",gParam->config.uart2.devtype,sizeof(gParam->config.uart2.devtype),CONFIG_FILE);
+	GetConfigFileStringValue("Uart2","block","",gParam->config.uart2.block,sizeof(gParam->config.uart2.block),CONFIG_FILE);
+	GetConfigFileStringValue("Uart2","alarm","",gParam->config.uart2.alarm,sizeof(gParam->config.uart2.alarm),CONFIG_FILE);
+	GetConfigFileStringValue("Uart2","parity","N",gParam->config.uart2.parity,sizeof(gParam->config.uart2.parity),CONFIG_FILE);
+	GetConfigFileStringValue("Uart2","file1","/dev/ttyS2",gParam->config.uart2.file1,sizeof(gParam->config.uart2.file1),CONFIG_FILE);	
+	GetConfigFileStringValue("Uart2","file2","/dev/ttyS3",gParam->config.uart2.file2,sizeof(gParam->config.uart2.file2),CONFIG_FILE);	
+
+	//摄像机
+	GetConfigFileStringValue("Camera","ip","192.168.1.10",gParam->config.camera.cameraip,sizeof(gParam->config.camera.cameraip),CONFIG_FILE);
+	GetConfigFileStringValue("Camera","user","admin",gParam->config.camera.camerauser,sizeof(gParam->config.camera.camerauser),CONFIG_FILE);
+	GetConfigFileStringValue("Camera","pwd","123456",gParam->config.camera.camerapwd,sizeof(gParam->config.camera.camerapwd),CONFIG_FILE);
+	
+	return;
+}
+
+void LocalConfig::UpdateGlobalConfig(Gloabl_Param *gParam){
+	if(gParam == NULL)
+		return;
+	char tmp[128];
+
+	char filename[256];
+	GetCompletePath(CONFIG_FILE,filename);
+
+	FILE *fp = fopen(filename,"w");
+	if(fp){
+		//服务器
+		fputs("[Server]\r\n",fp);
+		
+		if(strcmp(gParam->config.server.name,"") != 0){
+			snprintf(tmp,sizeof(tmp),"networkcard=%s\r\n",gParam->config.server.name);
+			fputs(tmp,fp);
+		}
+
+		snprintf(tmp,sizeof(tmp),"serverip=%s\r\n",gParam->config.server.ip);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"serverport=%s\r\n",gParam->config.server.port);
+		fputs(tmp,fp);
+
+		//串口组1
+		fputs("\r\n[Uart1]\r\n",fp);
+		
+		snprintf(tmp,sizeof(tmp),"devtype=%d\r\n",gParam->config.uart1.devtype);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"block=%d\r\n",gParam->config.uart1.block);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"alarm=%d\r\n",gParam->config.uart1.alarm);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"baude=%d\r\n",gParam->config.uart1.baude);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"databits=%d\r\n",gParam->config.uart1.databits);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"stopbits=%d\r\n",gParam->config.uart1.stopbits);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"parity=%s\r\n",gParam->config.uart1.parity);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"file1=%s\r\n",gParam->config.uart1.file1);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"file2=%s\r\n",gParam->config.uart1.file2);
+		fputs(tmp,fp);
+
+		//串口组2
+		fputs("\r\n[Uart2]\r\n",fp);
+
+		snprintf(tmp,sizeof(tmp),"devtype=%d\r\n",gParam->config.uart2.devtype);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"block=%d\r\n",gParam->config.uart2.block);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"alarm=%d\r\n",gParam->config.uart2.alarm);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"baude=%d\r\n",gParam->config.uart2.baude);
+		fputs(tmp,fp);
+		
+		snprintf(tmp,sizeof(tmp),"databits=%d\r\n",gParam->config.uart2.databits);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"stopbits=%d\r\n",gParam->config.uart2.stopbits);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"parity=%s\r\n",gParam->config.uart2.parity);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"file1=%s\r\n",gParam->config.uart2.file1);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"file2=%s\r\n",gParam->config.uart2.file2);
+		fputs(tmp,fp);
+
+		//摄像头
+		fputs("\r\n[Camera]\r\n",fp);
+
+		snprintf(tmp,sizeof(tmp),"ip=%s\r\n",gParam->config.camera.cameraip);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"user=%s\r\n",gParam->config.camera.camerauser);
+		fputs(tmp,fp);
+
+		snprintf(tmp,sizeof(tmp),"pwd=%s\r\n",gParam->config.camera.camerapwd);
+		fputs(tmp,fp);
+
+		fflush(fp);
+		
+		//printf("write config ok!\n");
+		WriteLog(__FILE__,__LINE__,LOG_INFO,"write config ok!");
+		
+	}else{
+		//printf("write config fail!\n");
+		WriteLog(__FILE__,__LINE__,LOG_INFO,"write config error!");
+	}
+
+}
+
+static void LocalConfig::ReadGlobalParam(Gloabl_Param *gParam){
+	return UpdateGlobalParam(gParam);
+}
+
+static void LocalConfig::WriteGlobalConfig(Gloabl_Param *gParam){
+	return UpdateGlobalConfig(gParam);
+}
+
+
